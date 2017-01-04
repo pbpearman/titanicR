@@ -1,0 +1,130 @@
+---
+title: "Titanic Graphics and More"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+```
+```{r}
+train <- read.csv("./titanic_data/train.csv")
+test <- read.csv("./titanic_data/test.csv")
+
+
+```
+
+
+```{r}
+colnames(train)
+```
+
+```{r}
+summary(train)
+```
+
+
+```{r}
+train$Surv=rep("YES",length(train$Survived))
+train$Surv[train$Survived==0]<-"NO"
+head(train$Surv)
+
+```
+
+```{r}
+surv_sex <- ggplot(data=train) +
+  geom_bar(mapping= aes(x=Sex,fill=Surv), alpha=0.8, position="fill")
+```
+
+```{r}
+legend_title="Passengers \n Survived?"
+surv_sex +
+  scale_fill_brewer(legend_title, type = "seq", palette = 2, direction = 1) +
+  #scale_fill_manual(legend_title,values=c("palegreen","turquoise"))+
+  ggtitle("Survival on the Titanic, by Gender") +
+  theme(plot.title = element_text(hjust=0.5, size=rel(1.5),color="red",face="bold")) +
+  labs(x="Survival",y="Proportion",size=rel(1.5)) +
+  theme(axis.title.x=element_text(color="darkgreen",face="italic"))+
+  theme(axis.title.y=element_text(color="darkgreen",face="italic"))
+
+```
+
+Below are the frequencies of survival by passenger class and the dataframe dimensions
+```{r}
+(table(train$Pclass,train$Survived))
+dim(train)
+```
+```{r}
+train$Pclass <- as.character(train$Pclass)
+test$Pclass <- as.character(test$Pclass)
+  
+```
+
+```{r}
+packs <- c("png","grid")
+garb <- lapply(packs, require, character.only = TRUE)
+img <- readPNG("./titanic_data/Stoewer_titanic.png")
+tit_rast <- rasterGrob(img, interpolate=TRUE)
+
+class_survival <- ggplot(data=train) +
+  annotation_custom(tit_rast, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf)+
+  theme(aspect.ratio = 240/350) +
+  geom_bar(mapping=aes(Pclass,fill=Surv), alpha = 0.85, position="fill")
+
+```
+
+```{r}
+class_survival +
+  scale_fill_brewer(legend_title, type = "seq", palette = 4, direction = 0) +
+  ggtitle("Survival on the Titanic, by Passenger Class") +
+  theme(plot.title = element_text(hjust=0.5, size=rel(1.5),color="black",face="bold")) +
+  labs(x="Passenger Class",y="Proportion") +
+  theme(axis.title.x=element_text(color="darkgreen",face="italic"))+
+  theme(axis.title.y=element_text(color="darkgreen",face="italic"))
+```
+
+```{r}
+sum(as.numeric(is.na(train$Fare)))
+```
+
+
+```{r}
+(fare_hist <- ggplot(train,aes(Fare,fill=Surv)) +
+  geom_histogram(binwidth=50,position="stack",alpha=0.8)+ 
+  scale_fill_brewer(legend_title, type = "qual", palette = 4 , direction = 1) +
+  scale_x_continuous(breaks=seq(0,550,50),lim=c(0,550),minor_breaks=NULL)+
+  scale_y_continuous(limits=c(0,300),breaks=seq(0,300,50),minor_breaks = seq(0,300,10))+
+  ggtitle("Survival on the Titanic, by Ticket Price") +
+  theme(plot.title = element_text(hjust=0.5, size=rel(1.5),color="black",face="bold")) +
+  labs(x="Ticket Price",y="Count",size=rel(1.5)) +
+  theme(axis.title.x=element_text(color="darkgreen",face="italic"))+
+  theme(axis.title.y=element_text(color="darkgreen",face="italic")))
+```
+```{r}
+(colSums(is.na(train)))
+(colSums(is.na(test)))
+```
+```{r}
+test2<-test
+train2<-train
+(length(test2$Fare))
+(length(train2$Fare))
+test2$Survived <- NA
+test2$Surv <- NA
+all <- rbind(train2,test2)
+all$Fare[which(is.na(all$Fare)==TRUE)] <- median(all$Fare, na.rm=TRUE)
+(sum(is.na(all$Fare)))
+
+```
+```{r}
+library(rpart)
+pred_age <- rpart(Age ~ Pclass + Sex + SibSp + Parch + Fare + Embarked, data=all[!is.na(all$Age),],method="anova")
+```
+```{r}
+all$Age[is.na(all$Age)] <- predict(pred_age,all[is.na(all$Age),])
+sum(is.na(all$Age))
+```
+
+
+
+
